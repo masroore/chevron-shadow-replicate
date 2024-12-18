@@ -35,7 +35,7 @@ def src_scan_orders(dt: date) -> list[OrderContext]:
     with db.Database.make(DB_SRC) as db_:
         test_cat = dal.get_test_catalog(db_)
         invoices = dal.fetch_invoices(dt, db_)
-        croak(f"Found {len(invoices)} invoices for {dt}, Last: {last_id}")
+        croak(f"Found {len(invoices)} invoices for {dt}")
         contexts = []
         for inv in invoices:
             croak(f"Scanning #{inv.InvoiceId}")
