@@ -71,6 +71,7 @@ def filter_orders(orders: list[OrderContext], barrier: int) -> list[OrderContext
         if total > barrier:
             break
         result.append(o)
+    croak(f"Filtered {len(result)} orders | HWM: {barrier} | Actual: {total}")
     return result
 
 
