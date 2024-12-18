@@ -21,7 +21,7 @@ def dest_last_invoice_id(dt: date) -> int | None:
         return dal.last_src_invoice_id(dt, db_)
 
 
-def src_scan_orders(dt: date, last_id: int | None) -> list[OrderContext]:
+def scan_insert_orders(dt: date, last_id: int | None) -> list[OrderContext]:
     with db.Database.make(DB_SRC) as db_:
         test_cat = dal.get_test_catalog(db_)
         # staff = dal.get_staff_catalog(db_src)
@@ -37,6 +37,8 @@ def src_scan_orders(dt: date, last_id: int | None) -> list[OrderContext]:
             ctx.scan(db_)
             ctx.sanitize_tests(test_cat)
             contexts.append(ctx)
+            dest_insert_chain(ctx)
+
         return contexts
 
 
@@ -61,9 +63,7 @@ def looper(wait: int):
     while True:
         dt = arrow.now().date()
         last_id = dest_last_invoice_id(dt)
-        orders = src_scan_orders(dt, last_id)
-        for o in orders:
-            dest_insert_chain(o)
+        scan_insert_orders(dt, last_id)
         time.sleep(wait)
 
 
