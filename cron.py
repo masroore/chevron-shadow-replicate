@@ -31,7 +31,8 @@ def purge_orders(dt: date):
             dal.purge_order_chain(ord.InvoiceId, db_)
 
 
-def src_scan_orders(dt: date) -> list[OrderContext]:
+def src_scan_orders(dt: date, barrier: int) -> list[OrderContext]:
+    total = 0
     with db.Database.make(DB_SRC) as db_:
         test_cat = dal.get_test_catalog(db_)
         invoices = dal.fetch_invoices(dt, db_)
@@ -41,6 +42,13 @@ def src_scan_orders(dt: date) -> list[OrderContext]:
             croak(f"Scanning #{inv.InvoiceId}")
             ctx = OrderContext(inv)
             ctx.scan(db_)
+            total += ctx.master.NetPayable
+            if total > barrier:
+                croak(
+                    f"Filtered {len(contexts)} orders | HWM: {barrier} | Actual: {total}"
+                )
+                break
+
             ctx.sanitize_tests(test_cat)
             contexts.append(ctx)
         return contexts
@@ -78,7 +86,8 @@ def filter_orders(orders: list[OrderContext], barrier: int) -> list[OrderContext
 if __name__ == "__main__":
     dt = arrow.now().date()
     purge_orders(dt)
+    barrier = get_rand_hwm()
     orders = src_scan_orders(dt)
-    orders = filter_orders(orders, get_rand_hwm())
+    # orders = filter_orders(orders, barrier)
     for o in orders:
         dest_insert_chain(o)
