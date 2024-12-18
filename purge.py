@@ -3,9 +3,8 @@ from datetime import date
 import arrow
 import yaml
 
-from src import db, dal, models
+from src import db, dal
 from src.utils import croak
-from src.catalogs import OrderContext
 
 with open("config.yml", "r") as file:
     config = yaml.safe_load(file)
