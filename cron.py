@@ -18,7 +18,7 @@ BARRIER_JITTER = config["barrier"]["jitter"]
 
 
 def get_rand_hwm() -> int:
-    return int(BARRIER + random.randrange(-BARRIER_JITTER, BARRIER_JITTER))
+    return int(BARRIER + random.randint(-BARRIER_JITTER, BARRIER_JITTER))
 
 
 def purge_orders(dt: date):
