@@ -24,7 +24,7 @@ def time_spread_invoices(orders: list[LabOrder], dt: date, db_: Database):
     for i, ord in enumerate(orders):
         order_time = sod + timedelta(seconds=i * interval)
         croak(
-            f"#{ord.InvoiceId} ({ord.OrderId}) Before: {ord.OrderDateTime} After: {order_time}"
+            f"#{ord.InvoiceId} ({ord.OrderId}) Before: {ord.OrderDateTime:%H:%M:%S} After: {order_time:%H:%M:%S}"
         )
         db_.execute(
             "UPDATE PROE.PatientLabOrders SET OrderDateTime = ? WHERE InvoiceId = ?",
