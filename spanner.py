@@ -43,4 +43,4 @@ with db.Database.make(DB_DEST) as db_:
     for dt in dates:
         invoices = dal.fetch_invoices(dt, db_)
         croak(f"Found {len(invoices)} invoices for {dt}")
-        time_spread_invoices(invoices, dt)
+        time_spread_invoices(invoices, dt, db_)
