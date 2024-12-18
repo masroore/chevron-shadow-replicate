@@ -36,11 +36,11 @@ def src_scan_orders(dt: date, barrier: int) -> list[OrderContext]:
     with db.Database.make(DB_SRC) as db_:
         test_cat = dal.get_test_catalog(db_)
         invoices = dal.fetch_invoices(dt, db_)
-        croak(f"Found {len(invoices)} invoices for {dt}")
+        croak(f"Found {len(invoices)} invoices for {dt} | Barrier: {barrier:,.0f}")
         contexts = []
         for i, inv in enumerate(invoices):
             croak(
-                f"{i:03d} Scanning #{inv.InvoiceId} {inv.OrderId} | Net: {total:,.0f}"
+                f"{i:04d} Scanning #{inv.InvoiceId} {inv.OrderId} | Net: {total:,.0f}"
             )
             ctx = OrderContext(inv)
             ctx.scan(db_)
