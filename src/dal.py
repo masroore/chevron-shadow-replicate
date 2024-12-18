@@ -245,6 +245,7 @@ def insert_order(order: models.LabOrder, db_: Database) -> bool:
         order.ReferrerCustomName,
         order.WebAccessToken,
     )
+    db_.commit()
     return True
 
 
@@ -285,7 +286,7 @@ INSERT INTO Finances.InvoiceMaster(
     """
     db_.execute(
         sql,
-        inv.InvoiceId,
+        invoice_id,
         inv.DateCreated,
         inv.PaymentStatus,
         inv.GrossPayable,
@@ -327,7 +328,7 @@ INSERT INTO Finances.InvoicePrimal(
     """
     db_.execute(
         sql,
-        inv.InvoiceId,
+        invoice_id,
         inv.DateCreated,
         inv.GrossPayable,
         inv.DiscountAmount,

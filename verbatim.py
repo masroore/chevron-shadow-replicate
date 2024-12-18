@@ -52,7 +52,7 @@ def dest_insert_chain(order: OrderContext):
         dal.insert_items(invoice_id, order.items, db_)
         dal.insert_tests(invoice_id, order.tests, db_)
         dal.insert_bundles(invoice_id, order.bundles, db_)
-
+        db_.commit()
 
 
 if __name__ == "__main__":
