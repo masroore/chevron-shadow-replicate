@@ -42,7 +42,7 @@ def dest_insert_chain(order: OrderContext):
     with db.Database.make(DB_DEST) as db_:
         if not dal.insert_order(order.order, db_):
             return
-        
+
 
 
 if __name__ == "__main__":
