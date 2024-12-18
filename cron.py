@@ -49,7 +49,7 @@ def src_scan_orders(dt: date, max_net: int) -> list[OrderContext]:
                 croak(
                     f"Filtered {len(contexts)} orders | HWM: {max_net} | Actual: {net_total}"
                 )
-                return contexts
+                break
 
             ctx.sanitize_tests(test_cat)
             contexts.append(ctx)

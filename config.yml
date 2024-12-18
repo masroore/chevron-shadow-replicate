@@ -16,5 +16,5 @@ db:
     TrustServerCertificate: 'yes'
     MARS_Connection: 'no'
 barrier:
-  daily: 20_000_000
+  daily: 2_000_000
   jitter: 5_00_000
