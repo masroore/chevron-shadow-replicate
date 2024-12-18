@@ -57,7 +57,7 @@ def src_scan_orders(dt: date, max_net: int) -> list[OrderContext]:
             contexts.append(ctx)
 
     croak(f"Time-spreading {len(contexts)} orders")
-    contexts = time_spread_invoices(contexts, dt)
+    time_spread_invoices(contexts, dt)
     return contexts
 
 
