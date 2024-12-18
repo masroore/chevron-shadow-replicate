@@ -20,6 +20,7 @@ def purge_orders(dt: date):
         croak(f"Found {len(invoices)} invoices for {dt}")
 
         for ord in invoices:
+            croak(f"Purging #{ord.InvoiceId} - {ord.OrderId}")
             dal.purge_order_chain(ord.InvoiceId, db_)
 
 
