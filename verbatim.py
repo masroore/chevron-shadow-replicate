@@ -1,3 +1,4 @@
+import time
 from datetime import date
 
 import arrow
@@ -12,6 +13,7 @@ with open("config.yml", "r") as file:
 
 DB_SRC = config["db"]["src"]
 DB_DEST = config["db"]["dst"]
+WAIT_SECONDS = int(config["main"]["wait_seconds"])
 
 
 def dest_last_invoice_id(dt: date) -> int | None:
@@ -55,9 +57,15 @@ def dest_insert_chain(order: OrderContext):
         db_.commit()
 
 
+def looper(wait: int):
+    while True:
+        dt = arrow.now().date()
+        last_id = dest_last_invoice_id(dt)
+        orders = src_scan_orders(dt, last_id)
+        for o in orders:
+            dest_insert_chain(o)
+        time.sleep(wait)
+
+
 if __name__ == "__main__":
-    dt = arrow.now().date()
-    last_id = dest_last_invoice_id(dt)
-    orders = src_scan_orders(dt, last_id)
-    for o in orders:
-        dest_insert_chain(o)
+    looper(WAIT_SECONDS)

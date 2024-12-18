@@ -15,6 +15,10 @@ db:
     Encrypt: 'no'
     TrustServerCertificate: 'yes'
     MARS_Connection: 'no'
+
+main:
+  wait_seconds: 30
+  
 barrier:
   daily: 2_000_000
   jitter: 5_00_000
