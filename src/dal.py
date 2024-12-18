@@ -505,7 +505,7 @@ INSERT INTO TestResults.ResultBundles(
             b.DisplayTitle,
             b.ComponentLabTests,
             b.DateCreated,
-            b.LastModified,
+            b.LastUpdated,
             b.TATRank,
             b.WorkflowStage,
         )

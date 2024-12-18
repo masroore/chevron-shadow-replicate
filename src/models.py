@@ -64,7 +64,7 @@ class ResultBundle(BaseModel):
     DisplayTitle: str | None = None
     ComponentLabTests: str | None = None
     DateCreated: datetime
-    LastModified: datetime | None = None
+    LastUpdated: datetime | None = None
 
 
 class OrderedBillableItem(BaseModel):
