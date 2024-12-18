@@ -38,8 +38,10 @@ def src_scan_orders(dt: date, barrier: int) -> list[OrderContext]:
         invoices = dal.fetch_invoices(dt, db_)
         croak(f"Found {len(invoices)} invoices for {dt}")
         contexts = []
-        for inv in invoices:
-            croak(f"Scanning #{inv.InvoiceId}")
+        for i, inv in enumerate(invoices):
+            croak(
+                f"{i:03d} Scanning #{inv.InvoiceId} {inv.OrderId} | Net: {total:,.0f}"
+            )
             ctx = OrderContext(inv)
             ctx.scan(db_)
             total += ctx.master.NetPayable
