@@ -90,7 +90,7 @@ def filter_orders(orders: list[OrderContext], barrier: int) -> list[OrderContext
     return result
 
 
-def time_spread_invoices(orders: list[OrderContext], dt: date) -> list:
+def time_spread_invoices(orders: list[OrderContext], dt: date):
     sod = datetime.combine(dt, datetime.min.time()) + timedelta(hours=8)
     eod = datetime.combine(dt, datetime.min.time()) + timedelta(hours=22)
     total_seconds = (eod - sod).total_seconds()
