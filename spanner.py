@@ -4,6 +4,7 @@ import arrow
 import yaml
 
 from src import db, dal
+from src.db import Database
 from src.models import LabOrder
 from src.utils import croak
 from src.catalogs import OrderContext
@@ -14,14 +15,22 @@ with open("config.yml", "r") as file:
 DB_DEST = config["db"]["dst"]
 
 
-def time_spread_invoices(orders: list[OrderContext], dt: date):
+def time_spread_invoices(orders: list[LabOrder], dt: date, db_: Database):
     sod = datetime.combine(dt, datetime.min.time()) + timedelta(hours=8)
     eod = datetime.combine(dt, datetime.min.time()) + timedelta(hours=22)
     total_seconds = (eod - sod).total_seconds()
     interval = total_seconds / len(orders)
 
     for i, ord in enumerate(orders):
-        ord.order.OrderDateTime = sod + timedelta(seconds=i * interval)
+        order_time = sod + timedelta(seconds=i * interval)
+        croak(
+            f"#{ord.InvoiceId} ({ord.OrderId}) Before: {ord.OrderDateTime} After: {order_time}"
+        )
+        db_.execute(
+            "UPDATE PROE.PatientLabOrders SET OrderDateTime = ? WHERE InvoiceId = ?",
+            order_time,
+            ord.InvoiceId,
+        )
 
 
 with db.Database.make(DB_DEST) as db_:
