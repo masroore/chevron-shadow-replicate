@@ -44,6 +44,14 @@ def dest_insert_chain(order: OrderContext):
         if not dal.insert_order(order.order, db_):
             return
 
+        invoice_id = dal.shadow_id_for_source_id(order.order.InvoiceId, db_)
+        dal.insert_master(invoice_id, order.master, db_)
+        dal.insert_primal(invoice_id, order.primal, db_)
+        dal.insert_transactions(invoice_id, order.transactions, db_)
+        dal.insert_items(invoice_id, order.items, db_)
+        dal.insert_tests(invoice_id, order.tests, db_)
+        dal.insert_bundles(invoice_id, order.bundles, db_)
+
 
 
 if __name__ == "__main__":

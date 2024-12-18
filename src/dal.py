@@ -246,3 +246,265 @@ def insert_order(order: models.LabOrder, db_: Database) -> bool:
         order.WebAccessToken,
     )
     return True
+
+
+def shadow_id_for_source_id(source_id: int, db_: Database) -> int | None:
+    sql = "SELECT InvoiceId FROM PROE.PatientLabOrders WHERE SourceInvoiceId = ?"
+    return db_.fetch_scalar(sql, "InvoiceId", source_id)
+
+
+def insert_master(invoice_id: int, inv: models.Invoice, db_: Database):
+    sql = """
+INSERT INTO Finances.InvoiceMaster(
+   InvoiceId
+  ,DateCreated
+  ,PaymentStatus
+  ,GrossPayable
+  ,DiscountAmount
+  ,TaxAmount
+  ,SurchargeAmount
+  ,NetPayable
+  ,PaidAmount
+  ,DueAmount
+  ,RefundAmount
+  ,PaidUpReferral
+) VALUES (
+   ?   -- InvoiceId - bigint
+  ,? -- DateCreated - smalldatetime
+  ,?   -- PaymentStatus - tinyint
+  ,?   -- GrossPayable - money
+  ,?   -- DiscountAmount - money
+  ,?   -- TaxAmount - money
+  ,?   -- SurchargeAmount - money
+  ,?   -- NetPayable - money
+  ,?   -- PaidAmount - money
+  ,?   -- DueAmount - money
+  ,?   -- RefundAmount - money
+  ,0   -- PaidUpReferral - money
+)    
+    """
+    db_.execute(
+        sql,
+        inv.InvoiceId,
+        inv.DateCreated,
+        inv.PaymentStatus,
+        inv.GrossPayable,
+        inv.DiscountAmount,
+        inv.TaxAmount,
+        inv.SurchargeAmount,
+        inv.NetPayable,
+        inv.PaidAmount,
+        inv.DueAmount,
+        inv.RefundAmount,
+    )
+
+
+def insert_primal(invoice_id: int, inv: models.Invoice, db_: Database):
+    sql = """
+INSERT INTO Finances.InvoicePrimal(
+   InvoiceId
+  ,DateCreated
+  ,GrossPayable
+  ,DiscountAmount
+  ,TaxAmount
+  ,SurchargeAmount
+  ,NetPayable
+  ,PaidAmount
+  ,DueAmount
+  ,RefundAmount
+) VALUES (
+   ?   -- InvoiceId - bigint
+  ,? -- DateCreated - smalldatetime
+  ,?   -- GrossPayable - money
+  ,?   -- DiscountAmount - money
+  ,?   -- TaxAmount - money
+  ,?   -- SurchargeAmount - money
+  ,?   -- NetPayable - money
+  ,?   -- PaidAmount - money
+  ,?   -- DueAmount - money
+  ,?   -- RefundAmount - money
+)    
+    """
+    db_.execute(
+        sql,
+        inv.InvoiceId,
+        inv.DateCreated,
+        inv.GrossPayable,
+        inv.DiscountAmount,
+        inv.TaxAmount,
+        inv.SurchargeAmount,
+        inv.NetPayable,
+        inv.PaidAmount,
+        inv.DueAmount,
+        inv.RefundAmount,
+    )
+
+
+def insert_transactions(
+    invoice_id: int, transactions: list[models.InvoiceTransaction], db_: Database
+):
+    sql = """
+INSERT INTO Finances.[InvoiceTransactions](
+   InvoiceId
+  ,PerformingUserId
+  ,WorkShiftId
+  ,AuthorizingUserId
+  ,TxTime
+  ,TxType
+  ,TxFlag
+  ,TxAmount
+  ,UserIpAddress
+  ,UserRemarks
+  ,NonCashAmount
+  ,PaymentMethod
+  ,PaymentSource
+  ,PaymentReference
+) VALUES (
+   ?   -- InvoiceId - bigint
+  ,? -- PerformingUserId - smallint
+  ,NULL -- WorkShiftId - int
+  ,NULL -- AuthorizingUserId - smallint
+  ,? -- TxTime - smalldatetime
+  ,?   -- TxType - tinyint
+  ,?   -- TxFlag - tinyint
+  ,?   -- TxAmount - money
+  ,NULL -- UserIpAddress - int
+  ,NULL -- UserRemarks - varchar(160)
+  ,?   -- NonCashAmount - money
+  ,?   -- PaymentMethod - tinyint
+  ,NULL -- PaymentSource - text
+  ,NULL -- PaymentReference - text
+)    
+    """
+    for tx in transactions:
+        db_.execute(
+            sql,
+            invoice_id,
+            tx.PerformingUserId,
+            tx.TxTime,
+            tx.TxType,
+            tx.TxFlag,
+            tx.TxAmount,
+            tx.NonCashAmount,
+            tx.PaymentMethod,
+        )
+
+
+def insert_items(
+    invoice_id: int, items: list[models.OrderedBillableItem], db_: Database
+):
+    sql = """
+INSERT INTO PROE.OrderedBillableItems(
+   InvoiceId
+  ,BillableItemId
+  ,UnitPrice
+  ,Quantity
+  ,DateCreated
+  ,IsCancelled
+) VALUES (
+   ?   -- InvoiceId - bigint
+  ,?   -- BillableItemId - smallint
+  ,?   -- UnitPrice - smallmoney
+  ,?   -- Quantity - smallint
+  ,? -- DateCreated - smalldatetime
+  ,0  -- IsCancelled - bit
+)    
+    """
+    for item in items:
+        db_.execute(
+            sql,
+            invoice_id,
+            item.BillableItemId,
+            item.UnitPrice,
+            item.Quantity,
+            item.DateCreated,
+        )
+
+
+def insert_tests(invoice_id: int, tests: list[models.OrderedLabTest], db_: Database):
+    sql = """
+INSERT INTO PROE.OrderedTests(
+   InvoiceId
+  ,LabTestId
+  ,ResultBundleId
+  ,IsCancelled
+  ,UnitPrice
+  ,WorkflowStage
+  ,DateCreated
+  ,LastModified
+  ,ResultsETA
+  ,LabNo
+) VALUES (
+   ?   -- InvoiceId - bigint
+  ,?   -- LabTestId - smallint
+  ,NULL -- ResultBundleId - bigint
+  ,0  -- IsCancelled - bit
+  ,?   -- UnitPrice - smallmoney
+  ,?   -- WorkflowStage - tinyint
+  ,? -- DateCreated - smalldatetime
+  ,? -- LastModified - smalldatetime
+  ,NULL -- ResultsETA - smalldatetime
+  ,NULL -- LabNo - varchar(12)
+)    
+    """
+    for t in tests:
+        db_.execute(
+            sql,
+            invoice_id,
+            t.LabTestId,
+            t.UnitPrice,
+            t.WorkflowStage,
+            t.DateCreated,
+            t.LastModified,
+        )
+
+
+def insert_bundles(invoice_id: int, bundles: list[models.ResultBundle], db_: Database):
+    sql = """
+INSERT INTO TestResults.ResultBundles(
+   InvoiceId
+  ,LabId
+  ,ReportHeaderId
+  ,IsActive
+  ,TestResultType
+  ,DisplayTitle
+  ,ComponentLabTests
+  ,DateCreated
+  ,LastUpdated
+  ,TATRank
+  ,WorkflowStage
+  ,FinalizingConsultantId
+  ,FinalizingConsultantName
+  ,CreatingUserId
+  ,ResultNotes
+) VALUES (
+   ? -- InvoiceId - bigint
+  ,?   -- LabId - smallint
+  ,NULL -- ReportHeaderId - int
+  ,1  -- IsActive - bit
+  ,?   -- TestResultType - tinyint
+  ,?  -- DisplayTitle - varchar(MAX)
+  ,? -- ComponentLabTests - varchar(MAX)
+  ,? -- DateCreated - smalldatetime
+  ,? -- LastUpdated - smalldatetime
+  ,?   -- TATRank - tinyint
+  ,?   -- WorkflowStage - tinyint
+  ,NULL -- FinalizingConsultantId - smallint
+  ,NULL -- FinalizingConsultantName - varchar(160)
+  ,NULL -- CreatingUserId - smallint
+  ,NULL -- ResultNotes - varbinary(MAX)
+)    
+    """
+    for b in bundles:
+        db_.execute(
+            sql,
+            invoice_id,
+            b.LabId,
+            b.TestResultType,
+            b.DisplayTitle,
+            b.ComponentLabTests,
+            b.DateCreated,
+            b.LastModified,
+            b.TATRank,
+            b.WorkflowStage,
+        )
