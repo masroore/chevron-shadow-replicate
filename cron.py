@@ -31,29 +31,30 @@ def purge_orders(dt: date):
             dal.purge_order_chain(ord.InvoiceId, db_)
 
 
-def src_scan_orders(dt: date, barrier: int) -> list[OrderContext]:
-    total = 0
+def src_scan_orders(dt: date, max_net: int) -> list[OrderContext]:
+    net_total = 0
     with db.Database.make(DB_SRC) as db_:
         test_cat = dal.get_test_catalog(db_)
         invoices = dal.fetch_invoices(dt, db_)
-        croak(f"Found {len(invoices)} invoices for {dt} | Barrier: {barrier:,.0f}")
+        croak(f"Found {len(invoices)} invoices for {dt} | HWM: {max_net:,.0f}")
         contexts = []
         for i, inv in enumerate(invoices):
             croak(
-                f"{i:04d} Scanning #{inv.InvoiceId} {inv.OrderId} | Net: {total:,.0f}"
+                f"{i:04d} Scanning #{inv.InvoiceId} {inv.OrderId} | Net: {net_total:,.0f}"
             )
             ctx = OrderContext(inv)
             ctx.scan(db_)
-            total += ctx.master.NetPayable
-            if int(total) >= barrier:
+            net_total += ctx.master.NetPayable
+            if net_total >= max_net:
                 croak(
-                    f"Filtered {len(contexts)} orders | HWM: {barrier} | Actual: {total}"
+                    f"Filtered {len(contexts)} orders | HWM: {max_net} | Actual: {net_total}"
                 )
-                break
+                return contexts
 
             ctx.sanitize_tests(test_cat)
             contexts.append(ctx)
-        return contexts
+
+    return contexts
 
 
 def dest_insert_chain(order: OrderContext):
