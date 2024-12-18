@@ -30,6 +30,7 @@ def src_scan_orders(dt: date, last_id: int | None) -> list[OrderContext]:
         croak(f"Found {len(invoices)} invoices for {dt}, Last: {last_id}")
         contexts = []
         for inv in invoices:
+            croak(f"Scanning #{inv.InvoiceId}")
             ctx = OrderContext(inv)
             ctx.scan(db_)
             ctx.sanitize_tests(test_cat)
