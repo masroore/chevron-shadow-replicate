@@ -122,6 +122,10 @@ WHERE
     return [models.OrderedBillableItem(**row) for row in rows]
 
 
+def purge_order_chain(invoice_id: int, db_: Database):
+    db_.execute("EXEC PROE.SP_ShadowPurgeLabOrderChain ?", invoice_id)
+
+
 def invoice_bundles(invoice_id: int, db_: Database) -> list[models.ResultBundle]:
     sql = """
 SELECT
