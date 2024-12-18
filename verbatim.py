@@ -45,6 +45,7 @@ def dest_insert_chain(order: OrderContext):
             return
 
         invoice_id = dal.shadow_id_for_source_id(order.order.InvoiceId, db_)
+        croak(f"Src: {order.order.InvoiceId} -> Dest: {invoice_id}")
         dal.insert_master(invoice_id, order.master, db_)
         dal.insert_primal(invoice_id, order.primal, db_)
         dal.insert_transactions(invoice_id, order.transactions, db_)
