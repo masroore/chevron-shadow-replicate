@@ -4,17 +4,20 @@ from typing import Any
 import pyodbc
 
 
+def create_dsn(config: dict[str, str]) -> str:
+    return ";".join("=".join([k, v]) for k, v in config.items())
+
+
 class Database:
-    _conn_string: str | None = None
+    _dsn: str | None = None
     _conn: pyodbc.Connection | None = None
 
     @staticmethod
     def make(config: dict):
-        conn_string = ";".join("=".join([k, v]) for k, v in config.items())
-        return Database(conn_string)
+        return Database(create_dsn(config))
 
-    def __init__(self, conn_string: str):
-        self._conn_string = conn_string
+    def __init__(self, dsn: str):
+        self._dsn = dsn
         # self._conn = pyodbc.connect(self._conn_string)
 
     def commit(self):
@@ -24,7 +27,7 @@ class Database:
         return self._conn.cursor()
 
     def connect(self):
-        self._conn = pyodbc.connect(self._conn_string)
+        self._conn = pyodbc.connect(self._dsn)
 
     def __enter__(self):
         self.connect()
@@ -80,44 +83,10 @@ class Database:
             self._conn.close()
         self._conn = None
 
+    def fetch_scalar(self, sql: str, column: str, *params: Any) -> Any | None:
+        row = self.fetch(sql, *params)
+        return row.get(column) if row else None
 
-_conn_string: str | None = None
-
-
-def set_connection_string(config: dict):
-    global _conn_string
-    _conn_string = ";".join("=".join([k, v]) for k, v in config.items())
-
-
-def conn() -> Database:
-    return Database(_conn_string)
-
-
-def fetch(sql: str, *params: Any) -> dict | None:
-    with conn() as db_:
-        return db_.fetch(sql, *params)
-
-
-def fetch_scalar(sql: str, column: str, *params: Any) -> Any | None:
-    row = fetch(sql, *params)
-    return row.get(column) if row else None
-
-
-def fetch_all(sql: str, *params: Any) -> list[dict]:
-    with conn() as db_:
-        return db_.fetch_all(sql, *params)
-
-
-def fetch_all_scalars(sql: str, column: str, *params: Any) -> list[Any]:
-    rows = fetch_all(sql, *params)
-    return list(map(lambda r: r.get(column), rows)) if rows else []
-
-
-def execute(sql: str, *params: Any) -> int:
-    with conn() as db_:
-        return db_.execute(sql, *params)
-
-
-def sproc(sproc_name: str, *params: Any):
-    with conn() as db_:
-        return db_.sproc(sproc_name, *params)
+    def fetch_scalars(self, sql: str, column: str, *params: Any) -> Any | None:
+        rows = self.fetch_all(sql, *params)
+        return list(map(lambda r: r.get(column), rows)) if rows else []
