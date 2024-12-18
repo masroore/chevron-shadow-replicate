@@ -1,6 +1,6 @@
 import datetime
 
-from src import models
+from src import models, utils
 from src.db import Database
 
 
@@ -148,3 +148,97 @@ def invoice_transactions(
     sql = "SELECT TOP 1 * FROM Finances.InvoiceTransactions AS inv WHERE InvoiceId = ?"
     rows = db_.fetch_all(sql, invoice_id)
     return [models.InvoiceTransaction(**row) for row in rows]
+
+
+def last_src_invoice_id(dt: datetime.date, db_: Database) -> int | None:
+    sql = "SELECT MAX(SourceInvoiceId) AS _id_ FROM PROE.PatientLabOrders WHERE CAST (OrderDateTime AS DATE) = ?"
+    return db_.fetch_scalar(sql, "_id_", dt)
+
+
+def insert_order(order: models.LabOrder, db_: Database) -> bool:
+    sql = "SELECT COUNT(*) AS C FROM PROE.PatientLabOrders WHERE SourceInvoiceId = ?"
+    if db_.fetch_scalar(sql, "C", order.InvoiceId) > 0:
+        utils.croak(f"Skipping #{order.InvoiceId}. already exists")
+        return False
+    # sql = 'EXEC PROE.SP_ShadowCreateNewLabOrderFull(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,)'
+    sql = """
+  INSERT INTO PROE.PatientLabOrders(
+     SourceInvoiceId,
+     OrderId,
+     OrderDateTime,
+     WorkflowStage,
+     LastModified,
+     IsCancelled,
+     ReferrerId,
+     DisallowReferral,
+     OrderingUserId,
+     WorkShiftId,
+     RequestingLabId,
+     Title,
+     FirstName,
+     LastName,
+     Sex,
+     Age,
+     DoB,
+     PhoneNumber,
+     EmailAddress,
+     EmailTestResults,
+     IsReferrerUnknown,
+     ReferrerCustomName,
+     OrderNotes,
+     WebAccessToken,
+     RegisteredMemberId,
+     SubOrderTrackingId,
+     IsExternalSubOrder,
+     MirrorFlag
+  )
+  VALUES
+   (
+     ?,
+     ?,
+     ?,
+     ?,
+     ?,
+     0,
+     NULL, -- @refId,
+     0, -- @refDisallow,
+     ?,
+     NULL, -- @shiftId,
+     NULL, -- @reqLabId,
+     ?,
+     ?,
+     ?,
+     ?,
+     ?,
+     ?,
+     ?,
+     NULL, -- @email,
+     0, -- @emailResult,
+     1, -- @refUnk,
+     @refCustName,
+     NULL, -- @notes,
+     @webToken,
+     NULL, -- @regMemberId,
+     NULL, -- @subTrackingId,
+     0, -- @subIsExternal,
+     0)    
+    """
+    db_.execute(
+        sql,
+        order.InvoiceId,
+        order.OrderId,
+        order.OrderDateTime,
+        order.WorkflowStage,
+        order.OrderDateTime,
+        order.OrderingUserId,
+        order.Title,
+        order.FirstName,
+        order.LastName,
+        order.Sex,
+        order.Age,
+        order.DoB,
+        order.PhoneNumber,
+        order.ReferrerCustomName,
+        order.WebAccessToken,
+    )
+    return True
