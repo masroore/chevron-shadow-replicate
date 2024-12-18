@@ -1,3 +1,4 @@
 arrow
+pydantic
 pyodbc
 pyyaml
