@@ -16,8 +16,12 @@ DB_DEST = config["db"]["dst"]
 
 
 def time_spread_invoices(orders: list[LabOrder], dt: date, db_: Database):
-    sod = datetime.combine(dt, datetime.min.time()) + timedelta(hours=8)
-    eod = datetime.combine(dt, datetime.min.time()) + timedelta(hours=22)
+    sod = datetime.combine(dt, datetime.min.time()) + timedelta(
+        hours=8, minutes=random.randint(3, 12)
+    )
+    eod = datetime.combine(dt, datetime.min.time()) + timedelta(
+        hours=21, minutes=random.randint(45, 57)
+    )
     total_seconds = (eod - sod).total_seconds()
     interval = total_seconds / len(orders)
 
