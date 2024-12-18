@@ -36,6 +36,24 @@ WHERE
     return [models.LabOrder(**row) for row in rows]
 
 
+def fetch_invoices_after(
+    dt: datetime.date, last_id: int, db_: Database
+) -> list[models.LabOrder]:
+    sql = """
+SELECT
+    ord.*,
+    COALESCE(ref.FullName, ord.ReferrerCustomName, '') AS ReferrerCustomName
+FROM
+    PROE.PatientLabOrders AS ord
+    LEFT JOIN [Catalog].Referrers AS ref ON ord.ReferrerId = ref.Id 
+WHERE
+    InvoiceId > ? AND
+    CAST (ord.OrderDateTime AS DATE) = ?        
+    """
+    rows = db_.fetch_all(sql, last_id, dt)
+    return [models.LabOrder(**row) for row in rows]
+
+
 def get_test_catalog(db_: Database) -> Catalog:
     sql = """
 SELECT
