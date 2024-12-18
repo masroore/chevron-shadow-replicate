@@ -1,18 +1,13 @@
 import yaml
 from src import db
 
-
-def create_dsn(config: dict[str, str]) -> str:
-    return ";".join(f"{k}={v}" for k, v in config.items())
-
-
 with open("config.yml", "r") as file:
     config = yaml.safe_load(file)
 
-source_dsn = create_dsn(config["db"]["src"])
-dest_dsn = create_dsn(config["db"]["dst"])
+DB_SRC = config["db"]["src"]
+DB_DEST = config["db"]["dst"]
 
-with db.Database.make(config["db"]["src"]) as src_db:
+with db.Database.make(DB_SRC) as src_db:
     src_db.connect()
-    row = src_db.fetch_val("SELECT COUNT(*) FROM Staff.Users")
+    row = src_db.fetch_scalar("SELECT COUNT(*) AS X FROM Staff.Users", "X")
     print(row)
