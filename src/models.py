@@ -12,6 +12,29 @@ class LabTest(BaseModel):
     LabName: str
 
 
+class OrderedLabTest(BaseModel):
+    Id: int
+    InvoiceId: int
+    LabTestId: int
+    ResultBundleId: int | None = None
+    TestName: str | None = None
+    UnitPrice: int
+    WorkflowStage: int
+    DateCreated: datetime
+    LastModified: datetime | None = None
+
+
+class OrderedBillableItem(BaseModel):
+    Id: int
+    InvoiceId: int
+    BillableItemId: int | None = None
+    BillableItemName: str | None = None
+    UnitPrice: int
+    Quantity: int
+    DateCreated: datetime
+    LastModified: datetime | None = None
+
+
 class User(BaseModel):
     Id: int
     UserName: str

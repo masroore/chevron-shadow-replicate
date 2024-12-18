@@ -4,6 +4,8 @@ import yaml
 from src import db, utils, models, catalogs
 import arrow
 
+from src.catalogs import OrderContext
+
 with open("config.yml", "r") as file:
     config = yaml.safe_load(file)
 
@@ -27,11 +29,18 @@ WHERE
         return [models.LabOrder(**row) for row in rows]
 
 
-test_cat = catalogs.get_test_catalog(db.Database.make(DB_SRC))
-for t in test_cat.keys():
-    utils.croak(test_cat.find(t).model_dump())
-for u in catalogs.get_staff_catalog(db.Database.make(DB_SRC)):
-    utils.croak(u.model_dump())
+with db.Database.make(DB_SRC) as db_src:
+    test_cat = catalogs.get_test_catalog(db_src)
+    for t in test_cat.keys():
+        utils.croak(test_cat.find(t).model_dump())
+    for u in catalogs.get_staff_catalog(db_src):
+        utils.croak(u.model_dump())
 
-invoices = fetch_invoices(arrow.now().date())
-# for inv in invoices: utils.croak(inv.model_dump())
+    invoices = fetch_invoices(arrow.now().date())
+    for inv in invoices:
+        ctx = OrderContext(inv)
+        ctx.scan(db_src)
+        ctx.filter_tests(test_cat)
+        utils.croak(ctx.tests)
+        utils.croak(ctx.items)
+        break
