@@ -14,7 +14,9 @@ class Database:
 
     @staticmethod
     def make(config: dict):
-        return Database(create_dsn(config))
+        db = Database(create_dsn(config))
+        db.connect()
+        return db
 
     def __init__(self, dsn: str):
         self._dsn = dsn

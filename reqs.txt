@@ -2,3 +2,4 @@ arrow
 pydantic
 pyodbc
 pyyaml
+prettyprinter
