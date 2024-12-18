@@ -12,14 +12,57 @@ class LabTest(BaseModel):
     LabName: str
 
 
+class Invoice(BaseModel):
+    InvoiceId: int
+    PaymentStatus: int = 0
+    GrossPayable: int = 0
+    DiscountAmount: int = 0
+    TaxAmount: int = 0
+    SurchargeAmount: int = 0
+    NetPayable: int = 0
+    PaidAmount: int = 0
+    DueAmount: int = 0
+    RefundAmount: int = 0
+    PaidUpReferral: int = 0
+    DateCreated: datetime
+
+
+class InvoiceTransaction(BaseModel):
+    Id: int
+    InvoiceId: int
+    WorkShiftId: int | None = None
+    PerformingUserId: int | None = None
+    TxTime: datetime
+    TxType: int
+    TxFlag: int
+    TxAmount: int
+    NonCashAmount: int
+    PaymentMethod: int
+
+
 class OrderedLabTest(BaseModel):
     Id: int
     InvoiceId: int
     LabTestId: int
+    LabId: int
     ResultBundleId: int | None = None
     TestName: str | None = None
     UnitPrice: int
     WorkflowStage: int
+    DateCreated: datetime
+    LastModified: datetime | None = None
+
+
+class ResultBundle(BaseModel):
+    Id: int
+    InvoiceId: int | None = None
+    LabId: int
+    ReportHeaderId: int | None = None
+    TestResultType: int
+    TATRank: int
+    WorkflowStage: int
+    DisplayTitle: str | None = None
+    ComponentLabTests: str | None = None
     DateCreated: datetime
     LastModified: datetime | None = None
 

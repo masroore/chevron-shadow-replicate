@@ -1,9 +1,8 @@
-import datetime
-
-import yaml
-from src import db, utils, models, catalogs
 import arrow
+import yaml
 
+from src import db, dal
+from src.utils import croak
 from src.catalogs import OrderContext
 
 with open("config.yml", "r") as file:
@@ -13,34 +12,22 @@ DB_SRC = config["db"]["src"]
 DB_DEST = config["db"]["dst"]
 
 
-def fetch_invoices(dt: datetime.date) -> list[models.LabOrder]:
-    with db.Database.make(DB_SRC) as src_db:
-        sql = """
-SELECT
-    ord.*,
-    COALESCE(ref.FullName, ord.ReferrerCustomName, '') AS ReferrerCustomName
-FROM
-    PROE.PatientLabOrders AS ord
-    LEFT JOIN [Catalog].Referrers AS ref ON ord.ReferrerId = ref.Id 
-WHERE
-    CAST (ord.OrderDateTime AS DATE) = ?        
-        """
-        rows = src_db.fetch_all(sql, dt)
-        return [models.LabOrder(**row) for row in rows]
+def scan_source_orders() -> list[OrderContext]:
+    with db.Database.make(DB_SRC) as db_src:
+        test_cat = dal.get_test_catalog(db_src)
+        # staff = dal.get_staff_catalog(db_src)
+
+        dt = arrow.now().date()
+        invoices = dal.fetch_invoices(dt, db_src)
+        croak(f"Found {len(invoices)} invoices for {dt}")
+        contexts = []
+        for inv in invoices:
+            ctx = OrderContext(inv)
+            ctx.scan(db_src)
+            ctx.sanitize_tests(test_cat)
+            contexts.append(ctx)
+        return contexts
 
 
-with db.Database.make(DB_SRC) as db_src:
-    test_cat = catalogs.get_test_catalog(db_src)
-    for t in test_cat.keys():
-        utils.croak(test_cat.find(t).model_dump())
-    for u in catalogs.get_staff_catalog(db_src):
-        utils.croak(u.model_dump())
-
-    invoices = fetch_invoices(arrow.now().date())
-    for inv in invoices:
-        ctx = OrderContext(inv)
-        ctx.scan(db_src)
-        ctx.filter_tests(test_cat)
-        utils.croak(ctx.tests)
-        utils.croak(ctx.items)
-        break
+if __name__ == "__main__":
+    orders = scan_source_orders()
