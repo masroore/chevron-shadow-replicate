@@ -87,7 +87,7 @@ if __name__ == "__main__":
     dt = arrow.now().date()
     purge_orders(dt)
     barrier = get_rand_hwm()
-    orders = src_scan_orders(dt)
+    orders = src_scan_orders(dt, barrier)
     # orders = filter_orders(orders, barrier)
     for o in orders:
         dest_insert_chain(o)
