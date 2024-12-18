@@ -1,10 +1,10 @@
 import random
-from datetime import date
-
+from datetime import date, datetime, timedelta
 import arrow
 import yaml
 
 from src import db, dal
+from src.models import LabOrder
 from src.utils import croak
 from src.catalogs import OrderContext
 
@@ -36,7 +36,9 @@ def src_scan_orders(dt: date, max_net: int) -> list[OrderContext]:
     with db.Database.make(DB_SRC) as db_:
         test_cat = dal.get_test_catalog(db_)
         invoices = dal.fetch_invoices(dt, db_)
+
         croak(f"Found {len(invoices)} invoices for {dt} | HWM: {max_net:,.0f}")
+
         contexts = []
         for i, inv in enumerate(invoices):
             croak(
@@ -54,6 +56,8 @@ def src_scan_orders(dt: date, max_net: int) -> list[OrderContext]:
             ctx.sanitize_tests(test_cat)
             contexts.append(ctx)
 
+    croak(f"Time-spreading {len(contexts)} orders")
+    contexts = time_spread_invoices(contexts, dt)
     return contexts
 
 
@@ -84,6 +88,16 @@ def filter_orders(orders: list[OrderContext], barrier: int) -> list[OrderContext
         result.append(o)
     croak(f"Filtered {len(result)} orders | HWM: {barrier} | Actual: {total}")
     return result
+
+
+def time_spread_invoices(orders: list[OrderContext], dt: date) -> list:
+    sod = datetime.combine(dt, datetime.min.time()) + timedelta(hours=8)
+    eod = datetime.combine(dt, datetime.min.time()) + timedelta(hours=22)
+    total_seconds = (eod - sod).total_seconds()
+    interval = total_seconds / len(orders)
+
+    for i, ord in enumerate(orders):
+        ord.order.OrderDateTime = sod + timedelta(seconds=i * interval)
 
 
 if __name__ == "__main__":
