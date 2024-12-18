@@ -45,7 +45,7 @@ def src_scan_orders(dt: date, barrier: int) -> list[OrderContext]:
             ctx = OrderContext(inv)
             ctx.scan(db_)
             total += ctx.master.NetPayable
-            if total >= barrier:
+            if int(total) >= barrier:
                 croak(
                     f"Filtered {len(contexts)} orders | HWM: {barrier} | Actual: {total}"
                 )
