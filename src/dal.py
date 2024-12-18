@@ -30,7 +30,9 @@ FROM
     PROE.PatientLabOrders AS ord
     LEFT JOIN [Catalog].Referrers AS ref ON ord.ReferrerId = ref.Id 
 WHERE
-    CAST (ord.OrderDateTime AS DATE) = ?        
+    CAST (ord.OrderDateTime AS DATE) = ?
+ORDER BY
+    ord.InvoiceId            
     """
     rows = db_.fetch_all(sql, dt)
     return [models.LabOrder(**row) for row in rows]
@@ -48,7 +50,9 @@ FROM
     LEFT JOIN [Catalog].Referrers AS ref ON ord.ReferrerId = ref.Id 
 WHERE
     InvoiceId > ? AND
-    CAST (ord.OrderDateTime AS DATE) = ?        
+    CAST (ord.OrderDateTime AS DATE) = ?
+ORDER BY
+    ord.InvoiceId
     """
     rows = db_.fetch_all(sql, last_id, dt)
     return [models.LabOrder(**row) for row in rows]
