@@ -1,3 +1,4 @@
+import enum
 from datetime import datetime, date
 
 from pydantic import BaseModel
@@ -27,13 +28,21 @@ class Invoice(BaseModel):
     DateCreated: datetime
 
 
+class TransactionType(enum.IntEnum):
+    Unknown = 0
+    Payment = 10
+    Refund = 20
+    CashDiscount = 30
+    DiscountRebate = 40
+
+
 class InvoiceTransaction(BaseModel):
     Id: int
     InvoiceId: int
     WorkShiftId: int | None = None
     PerformingUserId: int | None = None
     TxTime: datetime
-    TxType: int
+    TxType: TransactionType = TransactionType.Unknown
     TxFlag: int
     TxAmount: int
     NonCashAmount: int
