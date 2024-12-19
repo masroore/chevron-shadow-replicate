@@ -28,6 +28,11 @@ def ensure_shift(orders: list[LabOrder], dt: date, db_: Database):
                 shift_id,
                 ord.InvoiceId,
             )
+            db_.execute(
+                "UPDATE Finances.InvoiceTransactions SET WorkShiftId = ? WHERE InvoiceId = ?",
+                shift_id,
+                ord.InvoiceId,
+            )
             shifts.append(shift_id)
 
     for sid in sorted(set(shifts)):
