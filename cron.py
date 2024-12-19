@@ -31,11 +31,35 @@ def purge_orders(dt: date):
             dal.purge_order_chain(ord.InvoiceId, db_)
 
 
+def ensure_user_shift(orders: list[LabOrder], dt: date, db_: db.Database) -> list[int]:
+    shifts = []
+    for ord in orders:
+        shift_id = dal.find_shift(ord.OrderingUserId, dt, db_)
+        if not shift_id:
+            shift_id = dal.create_shift(ord.OrderingUserId, dt, db_)
+
+        if shift_id:
+            db_.execute(
+                "UPDATE PROE.PatientLabOrders SET WorkShiftId = ? WHERE InvoiceId = ?",
+                shift_id,
+                ord.InvoiceId,
+            )
+            db_.execute(
+                "UPDATE Finances.InvoiceTransactions SET WorkShiftId = ? WHERE InvoiceId = ?",
+                shift_id,
+                ord.InvoiceId,
+            )
+            shifts.append(shift_id)
+
+    return sorted(set(shifts))
+
+
 def src_scan_orders(dt: date, max_net: int) -> list[OrderContext]:
     net_total = 0
     with db.Database.make(DB_SRC) as db_:
         test_cat = dal.get_test_catalog(db_)
         invoices = dal.fetch_invoices(dt, db_)
+        shifts = ensure_user_shift(invoices, dt, db_)
 
         croak(f"Found {len(invoices)} invoices for {dt} | HWM: {max_net:,.0f}")
 
@@ -56,8 +80,13 @@ def src_scan_orders(dt: date, max_net: int) -> list[OrderContext]:
             ctx.sanitize_tests(test_cat)
             contexts.append(ctx)
 
+        for sid in sorted(set(shifts)):
+            croak(f"Reconciling shift #{sid}")
+            dal.reconcile_shift(sid, True, db_)
+
     croak(f"Time-spreading {len(contexts)} orders")
     time_spread_invoices(contexts, dt)
+
     return contexts
 
 

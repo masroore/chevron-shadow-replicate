@@ -409,7 +409,7 @@ def get_shifts(dt: datetime.date, db_: Database) -> list[int]:
     return [int(row["Id"]) for row in rows]
 
 
-def reconcile_shift(shift_id: int, db_: Database):
+def reconcile_shift(shift_id: int, close_shift: bool, db_: Database):
     sql = """
 SELECT
     SUM(tx.TxAmount) AS T 
@@ -424,8 +424,16 @@ WHERE
     refunds = db_.fetch_scalar(sql, "T", shift_id, TransactionType.Refund) or 0
     discounts = db_.fetch_scalar(sql, "T", shift_id, TransactionType.CashDiscount) or 0
 
-    sql = "UPDATE Finances.WorkShifts SET ReceiveAmount = ?, RefundAmount = ?, DiscountAmount = ?, FinalBalance = ? WHERE Id = ?"
-    db_.execute(sql, received, refunds, discounts, received - refunds, shift_id)
+    sql = "UPDATE Finances.WorkShifts SET ReceiveAmount = ?, RefundAmount = ?, DiscountAmount = ?, FinalBalance = ?, IsClosed = ? WHERE Id = ?"
+    db_.execute(
+        sql,
+        received,
+        refunds,
+        discounts,
+        received - refunds,
+        1 if close_shift else 0,
+        shift_id,
+    )
 
 
 def insert_items(

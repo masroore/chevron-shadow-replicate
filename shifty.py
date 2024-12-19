@@ -36,7 +36,7 @@ def ensure_shift(orders: list[LabOrder], dt: date, db_: Database):
 
     for sid in sorted(set(shifts)):
         croak(f"Reconciling shift #{sid}")
-        dal.reconcile_shift(sid, db_)
+        dal.reconcile_shift(sid, True, db_)
 
 
 with db.Database.make(DB_DEST) as db_:

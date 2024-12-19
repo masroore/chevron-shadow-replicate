@@ -77,7 +77,7 @@ def reconcile():
     with db.Database.make(DB_DEST) as db_:
         shift_ids = dal.get_shifts(arrow.now().date(), db_)
         for sid in shift_ids:
-            dal.reconcile_shift(sid, db_)
+            dal.reconcile_shift(sid, True, db_)
 
 
 def looper(wait: int):
