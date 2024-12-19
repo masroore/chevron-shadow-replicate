@@ -44,7 +44,7 @@ def scan_insert_orders(dt: date, last_id: int | None) -> list[OrderContext]:
 
         for shift_id in sorted(set(shift_ids)):
             dal.reconcile_shift(shift_id, db_)
-            
+
         return contexts
 
 
@@ -73,6 +73,13 @@ def dest_insert_chain(order: OrderContext) -> int | None:
         return shift_id
 
 
+def reconcile():
+    with db.Database.make(DB_DEST) as db_:
+        shift_ids = dal.get_shifts(arrow.now().date(), db_)
+        for sid in shift_ids:
+            dal.reconcile_shift(sid, db_)
+
+
 def looper(wait: int):
     while True:
         dt = arrow.now().date()
@@ -83,4 +90,5 @@ def looper(wait: int):
 
 
 if __name__ == "__main__":
+    reconcile()
     looper(WAIT_SECONDS)

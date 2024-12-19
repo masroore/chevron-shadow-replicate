@@ -401,6 +401,12 @@ INSERT INTO Finances.[InvoiceTransactions](
         )
 
 
+def get_shifts(dt: datetime.date, db_: Database) -> list[int]:
+    sql = "SELECT Id FROM Finances.WorkShifts WHERE CAST(StartTime AS DATE) = ? AND IsClosed = 0"
+    rows = db_.fetch_all(sql, dt)
+    return [int(row["Id"]) for row in rows]
+
+
 def reconcile_shift(shift_id: int, db_: Database):
     sql = """
 SELECT
