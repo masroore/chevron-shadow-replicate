@@ -1,7 +1,9 @@
 import datetime
+import enum
 
 from src import models, utils
 from src.db import Database
+from src.models import TransactionType
 
 
 class Catalog:
@@ -410,18 +412,20 @@ def get_shifts(dt: datetime.date, db_: Database) -> list[int]:
 def reconcile_shift(shift_id: int, db_: Database):
     sql = """
 SELECT
-  SUM(tx.TxAmount) AS T 
+    SUM(tx.TxAmount) AS T 
 FROM
-  Finances.InvoiceTransactions AS tx
-  INNER JOIN Finances.WorkShifts AS ws ON tx.WorkShiftId = ws.Id 
+    Finances.InvoiceTransactions AS tx
+    INNER JOIN Finances.WorkShifts AS ws ON tx.WorkShiftId = ws.Id 
 WHERE
-  ws.Id = ? 
-  AND tx.TxType = 10
+    ws.Id = ? 
+    AND tx.TxType = ?
     """
-    total = db_.fetch_scalar(sql, "T", shift_id)
-    if total is not None:
-        sql = "UPDATE Finances.WorkShifts SET ReceiveAmount = ?, FinalBalance = ? WHERE Id = ?"
-        db_.execute(sql, total, total, shift_id)
+    received = db_.fetch_scalar(sql, "T", shift_id, TransactionType.Payment) or 0
+    refunds = db_.fetch_scalar(sql, "T", shift_id, TransactionType.Refund) or 0
+    discounts = db_.fetch_scalar(sql, "T", shift_id, TransactionType.CashDiscount) or 0
+
+    sql = "UPDATE Finances.WorkShifts SET ReceiveAmount = ?, RefundAmount = ?, DiscountAmount = ?, FinalBalance = ? WHERE Id = ?"
+    db_.execute(sql, received, refunds, discounts, received - refunds, shift_id)
 
 
 def insert_items(
