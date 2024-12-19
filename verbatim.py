@@ -73,9 +73,9 @@ def dest_insert_chain(order: OrderContext) -> int | None:
         return shift_id
 
 
-def reconcile():
+def reconcile(dt: date):
     with db.Database.make(DB_DEST) as db_:
-        shift_ids = dal.get_shifts(arrow.now().date(), db_)
+        shift_ids = dal.get_shifts(dt, db_)
         for sid in shift_ids:
             dal.reconcile_shift(sid, True, db_)
 
@@ -90,5 +90,5 @@ def looper(wait: int):
 
 
 if __name__ == "__main__":
-    reconcile()
+    reconcile(arrow.now().date())
     looper(WAIT_SECONDS)
