@@ -401,6 +401,23 @@ INSERT INTO Finances.[InvoiceTransactions](
         )
 
 
+def reconcile_shift(shift_id: int, db_: Database):
+    sql = """
+SELECT
+  SUM(tx.TxAmount) AS T 
+FROM
+  Finances.InvoiceTransactions AS tx
+  INNER JOIN Finances.WorkShifts AS ws ON tx.WorkShiftId = ws.Id 
+WHERE
+  ws.Id = ? 
+  AND tx.TxType = 10
+    """
+    total = db_.fetch_scalar(sql, "T", shift_id)
+    if total is not None:
+        sql = "UPDATE Finances.WorkShifts SET ReceiveAmount = ?, FinalBalance = ? WHERE Id = ?"
+        db_.execute(sql, total, total, shift_id)
+
+
 def insert_items(
     invoice_id: int, items: list[models.OrderedBillableItem], db_: Database
 ):
