@@ -17,7 +17,6 @@ DB_DEST = config["db"]["dst"]
 def ensure_shift(orders: list[LabOrder], dt: date, db_: Database):
     shifts = []
     for ord in orders:
-        croak(f"INSERT #{ord.InvoiceId} - {ord.OrderId}")
         shift_id = dal.find_shift(ord.OrderingUserId, dt, db_)
         if not shift_id:
             shift_id = dal.create_shift(ord.OrderingUserId, dt, db_)
@@ -36,6 +35,7 @@ def ensure_shift(orders: list[LabOrder], dt: date, db_: Database):
             shifts.append(shift_id)
 
     for sid in sorted(set(shifts)):
+        croak(f"Reconciling shift #{sid}")
         dal.reconcile_shift(sid, db_)
 
 
