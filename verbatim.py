@@ -64,6 +64,7 @@ def looper(wait: int):
         dt = arrow.now().date()
         last_id = dest_last_invoice_id(dt)
         scan_insert_orders(dt, last_id)
+        croak(f"Zzzzzz {wait}s...")
         time.sleep(wait)
 
 
