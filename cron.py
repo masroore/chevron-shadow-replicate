@@ -80,6 +80,7 @@ def src_scan_orders(dt: date, max_net: int) -> list[OrderContext]:
             ctx.sanitize_tests(test_cat)
             contexts.append(ctx)
 
+        croak(f"Found {len(shifts)} shifts")
         for sid in sorted(set(shifts)):
             croak(f"Reconciling shift #{sid}")
             dal.reconcile_shift(sid, True, db_)
