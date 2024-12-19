@@ -207,11 +207,11 @@ def insert_order(order: models.LabOrder, db_: Database) -> bool:
      ?,
      ?,
      ?,
-     0,
+     ?,
      NULL, -- @refId,
      0, -- @refDisallow,
      ?,
-     NULL, -- @shiftId,
+     ?, -- @shiftId,
      NULL, -- @reqLabId,
      ?,
      ?,
@@ -237,8 +237,10 @@ def insert_order(order: models.LabOrder, db_: Database) -> bool:
         order.OrderId,
         order.OrderDateTime,
         order.WorkflowStage,
-        order.OrderDateTime,
+        order.LastModified,
+        order.IsCancelled,
         order.OrderingUserId,
+        order.WorkShiftId,
         order.Title,
         order.FirstName,
         order.LastName,
@@ -346,7 +348,10 @@ INSERT INTO Finances.InvoicePrimal(
 
 
 def insert_transactions(
-    invoice_id: int, transactions: list[models.InvoiceTransaction], db_: Database
+    invoice_id: int,
+    transactions: list[models.InvoiceTransaction],
+    shift_id: int,
+    db_: Database,
 ):
     sql = """
 INSERT INTO Finances.[InvoiceTransactions](
@@ -367,7 +372,7 @@ INSERT INTO Finances.[InvoiceTransactions](
 ) VALUES (
    ?   -- InvoiceId - bigint
   ,? -- PerformingUserId - smallint
-  ,NULL -- WorkShiftId - int
+  ,? -- WorkShiftId - int
   ,NULL -- AuthorizingUserId - smallint
   ,? -- TxTime - smalldatetime
   ,?   -- TxType - tinyint
@@ -386,6 +391,7 @@ INSERT INTO Finances.[InvoiceTransactions](
             sql,
             invoice_id,
             tx.PerformingUserId,
+            shift_id,
             tx.TxTime,
             tx.TxType,
             tx.TxFlag,
@@ -513,3 +519,53 @@ INSERT INTO TestResults.ResultBundles(
             b.TATRank,
             b.WorkflowStage,
         )
+
+
+def find_shift(user_id: int, dt: datetime.date, db_: Database) -> int | None:
+    sql = "SELECT * FROM Finances.[WorkShifts] WHERE CAST(StartTime AS DATE) = ? AND UserId = ?"
+    row = db_.fetch(sql, dt, user_id)
+    if row:
+        return int(row["Id"])
+    return None
+
+
+def create_shift(user_id: int, dt: datetime.date, db_: Database) -> int:
+    sql = """
+INSERT INTO Finances.WorkShifts(
+   UserId
+  ,IsClosed
+  ,StartTime
+  ,EndTime
+  ,LastUpdated
+  ,NumOrders
+  ,AdditionalBalance
+  ,ReceiveAmount
+  ,DiscountAmount
+  ,DiscountRebateAmount
+  ,RefundAmount
+  ,FinalBalance
+  ,UserNotes
+  ,NonCashAmount
+) VALUES (
+   ?   -- UserId - smallint
+  ,0  -- IsClosed - bit
+  ,? -- StartTime - smalldatetime
+  ,NULL -- EndTime - smalldatetime
+  ,getdate() -- LastUpdated - smalldatetime
+  ,0   -- NumOrders - smallint
+  ,0   -- AdditionalBalance - money
+  ,0   -- ReceiveAmount - money
+  ,0   -- DiscountAmount - money
+  ,0   -- DiscountRebateAmount - money
+  ,0   -- RefundAmount - money
+  ,0   -- FinalBalance - money
+  ,NULL -- UserNotes - varchar(MAX)
+  ,0   -- NonCashAmount - money
+)    
+    """
+    with db_.cursor() as cur:
+        cur.execute(sql, user_id, dt)
+        cur.execute("SELECT @@IDENTITY AS ID;")
+        return cur.fetchone()[0]
+
+    return None

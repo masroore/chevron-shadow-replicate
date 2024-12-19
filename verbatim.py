@@ -23,6 +23,7 @@ def dest_last_invoice_id(dt: date) -> int | None:
 
 def scan_insert_orders(dt: date, last_id: int | None) -> list[OrderContext]:
     with db.Database.make(DB_SRC) as db_:
+        shift_ids = []
         test_cat = dal.get_test_catalog(db_)
         # staff = dal.get_staff_catalog(db_src)
         if last_id is not None and last_id > 0:
@@ -35,28 +36,38 @@ def scan_insert_orders(dt: date, last_id: int | None) -> list[OrderContext]:
             croak(f"Scanning #{inv.InvoiceId}")
             ctx = OrderContext(inv)
             ctx.scan(db_)
-            ctx.sanitize_tests(test_cat)
+            # ctx.sanitize_tests(test_cat)
             contexts.append(ctx)
-            dest_insert_chain(ctx)
+            shift_id = dest_insert_chain(ctx)
+            if shift_id:
+                shift_ids.append(shift_id)
 
         return contexts
 
 
-def dest_insert_chain(order: OrderContext):
+def dest_insert_chain(order: OrderContext) -> int | None:
     croak(f"INSERT #{order.order.InvoiceId} - {order.order.OrderId}")
     with db.Database.make(DB_DEST) as db_:
+        shift_id = dal.find_shift(order.order.OrderingUserId, arrow.now().date(), db_)
+        if not shift_id:
+            shift_id = dal.create_shift(
+                order.order.OrderingUserId, arrow.now().date(), db_
+            )
+
+        order.order.WorkShiftId = shift_id
         if not dal.insert_order(order.order, db_):
-            return
+            return None
 
         invoice_id = dal.shadow_id_for_source_id(order.order.InvoiceId, db_)
         croak(f"Src: {order.order.InvoiceId} -> Dest: {invoice_id}")
         dal.insert_master(invoice_id, order.master, db_)
         dal.insert_primal(invoice_id, order.primal, db_)
-        dal.insert_transactions(invoice_id, order.transactions, db_)
+        dal.insert_transactions(invoice_id, order.transactions, shift_id, db_)
         dal.insert_items(invoice_id, order.items, db_)
         dal.insert_tests(invoice_id, order.tests, db_)
         dal.insert_bundles(invoice_id, order.bundles, db_)
         db_.commit()
+        return shift_id
 
 
 def looper(wait: int):
