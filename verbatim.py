@@ -4,13 +4,11 @@ from datetime import date
 import arrow
 import yaml
 
-from src import db, dal
+from src import db, dal, utils
 from src.utils import croak
 from src.catalogs import OrderContext
 
-with open("config.yml", "r") as file:
-    config = yaml.safe_load(file)
-
+config = utils.get_config()
 DB_SRC = config["db"]["src"]
 DB_DEST = config["db"]["dst"]
 WAIT_SECONDS = int(config["main"]["wait_seconds"])
