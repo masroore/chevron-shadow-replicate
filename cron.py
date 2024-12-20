@@ -1,21 +1,20 @@
 import random
 from datetime import date, datetime, timedelta
+
 import arrow
-import yaml
 
-from src import db, dal
-from src.db import Database
-from src.models import LabOrder
-from src.utils import croak
+from src import db, dal, utils
 from src.catalogs import OrderContext
+from src.db import Database
+from src.utils import croak
 
-with open("config.yml", "r") as file:
-    config = yaml.safe_load(file)
-
+config = utils.get_config()
 DB_SRC = config["db"]["src"]
 DB_DEST = config["db"]["dst"]
-BARRIER = config["barrier"]["daily"]
-BARRIER_JITTER = config["barrier"]["jitter"]
+BARRIER = int(config["barrier"]["daily"])
+BARRIER_JITTER = int(config["barrier"]["jitter"])
+START_HOURS = int(config["main"]["business_hours"]["start"])
+END_HOURS = int(config["main"]["business_hours"]["end"])
 
 
 def get_rand_hwm() -> int:
@@ -30,6 +29,9 @@ def purge_orders(dt: date):
         for ord in invoices:
             croak(f"Purging #{ord.InvoiceId} - {ord.OrderId}")
             dal.purge_order_chain(ord.InvoiceId, db_)
+
+        croak(f"Purging work shifts")
+        dal.purge_work_shifts(dt, db_)
 
 
 def recreate_shifts(orders: list[OrderContext], dt: date, db_: Database) -> list[int]:
@@ -93,7 +95,7 @@ def src_scan_orders(dt: date, max_net: int) -> list[OrderContext]:
     return contexts
 
 
-def dest_insert_chain(order: OrderContext, db_: Database):
+def insert_lab_order_chain(order: OrderContext, db_: Database):
     croak(f"INSERT #{order.order.InvoiceId} - {order.order.OrderId}")
     if not dal.insert_order(order.order, db_):
         return
@@ -102,7 +104,7 @@ def dest_insert_chain(order: OrderContext, db_: Database):
     croak(f"Src: {order.order.InvoiceId} -> Dest: {invoice_id}")
     dal.insert_master(invoice_id, order.master, db_)
     dal.insert_primal(invoice_id, order.primal, db_)
-    dal.insert_transactions(invoice_id, order.transactions, db_)
+    dal.insert_transactions(invoice_id, order.transactions, None, db_)
     dal.insert_items(invoice_id, order.items, db_)
     dal.insert_tests(invoice_id, order.tests, db_)
     dal.insert_bundles(invoice_id, order.bundles, db_)
@@ -121,20 +123,19 @@ def filter_orders(orders: list[OrderContext], barrier: int) -> list[OrderContext
     return result
 
 
-def reconcile(shifts: list[int]):
+def reconcile(shifts: list[int], db_: Database):
     croak(f"Found {len(shifts)} shifts")
-    with db.Database.make(DB_DEST) as db_:
-        for sid in sorted(set(shifts)):
-            croak(f"Reconciling shift #{sid}")
-            dal.reconcile_shift(sid, True, db_)
+    for sid in sorted(set(shifts)):
+        croak(f"Reconciling shift #{sid}")
+        dal.reconcile_shift(sid, True, db_)
 
 
 def time_spread_invoices(orders: list[OrderContext], dt: date):
     sod = datetime.combine(dt, datetime.min.time()) + timedelta(
-        hours=8, minutes=random.randint(3, 12)
+        hours=START_HOURS, minutes=random.randint(3, 12)
     )
     eod = datetime.combine(dt, datetime.min.time()) + timedelta(
-        hours=21, minutes=random.randint(45, 57)
+        hours=END_HOURS - 1, minutes=random.randint(45, 57)
     )
     total_seconds = (eod - sod).total_seconds()
     interval = total_seconds / len(orders)
@@ -143,11 +144,13 @@ def time_spread_invoices(orders: list[OrderContext], dt: date):
         ord.order.OrderDateTime = sod + timedelta(seconds=i * interval)
 
 
-def populate_shadow(orders: list[OrderContext], dt: date, barrier: int):
+def populate_shadow(orders: list[OrderContext], dt: date):
     with db.Database.make(DB_DEST) as db_:
-        recreate_shifts(orders, dt, db_)
+        shifts = recreate_shifts(orders, dt, db_)
         for ord in orders:
-            dest_insert_chain(ord)
+            insert_lab_order_chain(ord, db_)
+
+        reconcile(shifts, db_)
 
 
 if __name__ == "__main__":
@@ -156,4 +159,4 @@ if __name__ == "__main__":
     barrier = get_rand_hwm()
     orders = src_scan_orders(dt, barrier)
     # orders = filter_orders(orders, barrier)
-    populate_shadow(orders, dt, barrier)
+    populate_shadow(orders, dt)

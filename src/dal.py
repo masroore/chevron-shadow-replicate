@@ -352,7 +352,7 @@ INSERT INTO Finances.InvoicePrimal(
 def insert_transactions(
     invoice_id: int,
     transactions: list[models.InvoiceTransaction],
-    shift_id: int,
+    shift_id: int | None,
     db_: Database,
 ):
     sql = """
@@ -604,3 +604,9 @@ INSERT INTO Finances.WorkShifts(
         return cur.fetchone()[0]
 
     return None
+
+
+def purge_work_shifts(dt: datetime.date, db_: Database):
+    db_.execute(
+        "DELETE FROM Finances.WorkShifts WHERE CAST( StartTime AS DATE ) = ?", dt
+    )

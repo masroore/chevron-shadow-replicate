@@ -18,7 +18,10 @@ db:
 
 main:
   wait_seconds: 30
-  
+  business_hours:
+    start: 8
+    end: 22
+
 barrier:
   daily: 2_000_000
   jitter: 5_00_000
