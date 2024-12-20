@@ -415,9 +415,9 @@ SELECT
     SUM(tx.TxAmount) AS T 
 FROM
     Finances.InvoiceTransactions AS tx
-    INNER JOIN Finances.WorkShifts AS ws ON tx.WorkShiftId = ws.Id 
+    -- INNER JOIN Finances.WorkShifts AS ws ON tx.WorkShiftId = ws.Id
 WHERE
-    ws.Id = ? 
+    tx.WorkShiftId = ? 
     AND tx.TxType = ?
     """
     received = db_.fetch_scalar(sql, "T", shift_id, TransactionType.Payment) or 0
