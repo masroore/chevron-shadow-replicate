@@ -130,9 +130,9 @@ def filter_orders(orders: list[OrderContext], barrier: int) -> list[OrderContext
 
 def reconcile_shifts(shift_map: dict[int, int], db_: Database):
     croak(f"Found {len(shift_map.keys())} shifts")
-    for uid, sid in shift_map:
-        croak(f"Reconciling shift #{sid}")
-        dal.reconcile_shift(sid, True, db_)
+    for uid in shift_map.keys():
+        croak(f"Reconciling shift #{shift_map[uid]}")
+        dal.reconcile_shift(shift_map[uid], True, db_)
 
 
 def time_spread_invoices(orders: list[OrderContext], dt: date):
