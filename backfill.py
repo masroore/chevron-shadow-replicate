@@ -159,21 +159,13 @@ def populate_shadow(orders: list[OrderContext], dt: date):
 
 
 if __name__ == "__main__":
-    with db.Database.make(DB_DEST) as db_:
-        start_date = arrow.get("2024-12-11")
-        end_date = arrow.get("2024-12-19")
+    start_date = arrow.get("2024-12-11")
+    end_date = arrow.get("2024-12-19")
+    dt = start_date
 
-        dates = db_.fetch_scalars(
-            "SELECT DISTINCT CAST(OrderDateTime AS DATE) AS D FROM PROE.PatientLabOrders",
-            "D",
-        )
-        dates = sorted(set(dates))
-        croak(f"Found {len(dates)} unique dates")
-
-        dt = start_date
-        while dt <= end_date:
-            purge_orders(dt)
-            barrier = get_rand_hwm()
-            orders = src_scan_orders(dt, barrier)
-            # orders = filter_orders(orders, barrier)
-            populate_shadow(orders, dt)
+    while dt <= end_date:
+        purge_orders(dt)
+        barrier = get_rand_hwm()
+        orders = src_scan_orders(dt, barrier)
+        populate_shadow(orders, dt)
+        dt = dt.shift(days=1)
