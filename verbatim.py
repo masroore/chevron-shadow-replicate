@@ -43,7 +43,7 @@ def scan_insert_orders(dt: date, last_id: int | None) -> list[OrderContext]:
                 shift_ids.append(shift_id)
 
         for shift_id in sorted(set(shift_ids)):
-            dal.reconcile_shift(shift_id, db_)
+            dal.reconcile_shift(shift_id, True, db_)
 
         return contexts
 
