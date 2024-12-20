@@ -34,7 +34,9 @@ def purge_orders(dt: date):
         dal.purge_work_shifts(dt, db_)
 
 
-def recreate_shifts(orders: list[OrderContext], dt: date, db_: Database) -> list[int]:
+def recreate_shifts(
+    orders: list[OrderContext], dt: date, db_: Database
+) -> dict[int, int]:
     user_ids = set([x.order.OrderingUserId for x in orders])
     shift_map = {}
 
@@ -45,24 +47,25 @@ def recreate_shifts(orders: list[OrderContext], dt: date, db_: Database) -> list
         if shift_id:
             shift_map[uid] = shift_id
 
-    shifts: list[int] = []
+    """
     for ord in orders:
         shift_id = shift_map.get(ord.order.OrderingUserId)
 
         if shift_id:
             db_.execute(
-                "UPDATE PROE.PatientLabOrders SET WorkShiftId = ? WHERE InvoiceId = ?",
+                "UPDATE PROE.PatientLabOrders SET WorkShiftId = ? WHERE OrderingUserId = ? AND CAST(OrderDateTime AS DATE) = ?",
                 shift_id,
-                ord.order.InvoiceId,
+                ord.order.OrderingUserId,
+                ord.order.OrderDateTime.date(),
             )
             db_.execute(
                 "UPDATE Finances.InvoiceTransactions SET WorkShiftId = ? WHERE InvoiceId = ?",
                 shift_id,
                 ord.order.InvoiceId,
             )
-            shifts.append(shift_id)
+    """
 
-    return sorted(set(shifts))
+    return shift_map
 
 
 def src_scan_orders(dt: date, max_net: int) -> list[OrderContext]:
@@ -95,19 +98,21 @@ def src_scan_orders(dt: date, max_net: int) -> list[OrderContext]:
     return contexts
 
 
-def insert_lab_order_chain(order: OrderContext, db_: Database):
-    croak(f"INSERT #{order.order.InvoiceId} - {order.order.OrderId}")
-    if not dal.insert_order(order.order, db_):
+def insert_lab_order_chain(ctx: OrderContext, shift_map: dict[int, int], db_: Database):
+    croak(f"INSERT #{ctx.order.InvoiceId} - {ctx.order.OrderId}")
+    shift_id = shift_map.get(ctx.order.OrderingUserId)
+    ctx.order.WorkShiftId = shift_id
+    if not dal.insert_order(ctx.order, db_):
         return
 
-    invoice_id = dal.shadow_id_for_source_id(order.order.InvoiceId, db_)
-    croak(f"Src: {order.order.InvoiceId} -> Dest: {invoice_id}")
-    dal.insert_master(invoice_id, order.master, db_)
-    dal.insert_primal(invoice_id, order.primal, db_)
-    dal.insert_transactions(invoice_id, order.transactions, None, db_)
-    dal.insert_items(invoice_id, order.items, db_)
-    dal.insert_tests(invoice_id, order.tests, db_)
-    dal.insert_bundles(invoice_id, order.bundles, db_)
+    invoice_id = dal.shadow_id_for_source_id(ctx.order.InvoiceId, db_)
+    croak(f"Src: {ctx.order.InvoiceId} -> Dest: {invoice_id}")
+    dal.insert_master(invoice_id, ctx.master, db_)
+    dal.insert_primal(invoice_id, ctx.primal, db_)
+    dal.insert_transactions(invoice_id, ctx.transactions, shift_id, db_)
+    dal.insert_items(invoice_id, ctx.items, db_)
+    dal.insert_tests(invoice_id, ctx.tests, db_)
+    dal.insert_bundles(invoice_id, ctx.bundles, db_)
     db_.commit()
 
 
@@ -123,9 +128,9 @@ def filter_orders(orders: list[OrderContext], barrier: int) -> list[OrderContext
     return result
 
 
-def reconcile(shifts: list[int], db_: Database):
-    croak(f"Found {len(shifts)} shifts")
-    for sid in sorted(set(shifts)):
+def reconcile_shifts(shift_map: dict[int, int], db_: Database):
+    croak(f"Found {len(shift_map.keys())} shifts")
+    for uid, sid in shift_map:
         croak(f"Reconciling shift #{sid}")
         dal.reconcile_shift(sid, True, db_)
 
@@ -146,11 +151,11 @@ def time_spread_invoices(orders: list[OrderContext], dt: date):
 
 def populate_shadow(orders: list[OrderContext], dt: date):
     with db.Database.make(DB_DEST) as db_:
-        shifts = recreate_shifts(orders, dt, db_)
+        shift_map = recreate_shifts(orders, dt, db_)
         for ord in orders:
-            insert_lab_order_chain(ord, db_)
+            insert_lab_order_chain(ord, shift_map, db_)
 
-        reconcile(shifts, db_)
+        reconcile_shifts(shift_map, db_)
 
 
 if __name__ == "__main__":
